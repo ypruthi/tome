@@ -1,0 +1,11 @@
+{
+  "foundryUrl": "https://yuvrajpruthi.usw-22.palantirfoundry.com",
+  "site": {
+    "application": "ri.third-party-applications.main.application.67912294-edae-4a80-a510-f3ca79724a34",
+    "directory": "./dist",
+    "autoVersion": {
+      "type": "git-describe",
+      "tagPrefix": ""
+    }
+  }
+}
