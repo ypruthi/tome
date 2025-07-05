@@ -1,30 +1,14 @@
-import palantirLogo from "/palantir.svg";
-import reactLogo from "/react.svg";
 import React from "react";
-import css from "./Layout.module.css";
+import { Outlet } from "react-router-dom";
+import { Header } from "@/components/custom/header";   
 
-interface LayoutProps {
-  children?: React.ReactNode;
-}
-
-function Layout({ children }: LayoutProps) {
+export default function Layout() {
   return (
     <>
-      <div>
-        <a
-          href="https://www.palantir.com/docs/foundry/ontology-sdk/overview/"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <img src={palantirLogo} className={css.logo} alt="Palantir logo" />
-        </a>
-        <a href="https://react.dev" target="_blank" rel="noopener noreferrer">
-          <img src={reactLogo} className={css.logo} alt="React logo" />
-        </a>
-      </div>
-      {children}
+      <Header />                          
+      <main className="pt-6 px-6">        
+        <Outlet />        
+      </main>
     </>
   );
 }
-
-export default Layout;
