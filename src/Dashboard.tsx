@@ -8,16 +8,88 @@ import {
 import { Button } from "@/components/ui/button";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
-import { Upload, AlarmClock, BadgeInfo, Plus } from "lucide-react";
+import { CalendarDays, AlarmClock, BadgeInfo, Plus, AlertTriangle } from "lucide-react";
 import { FocusTimer } from "@/components/custom/focusTimer";
 import { CourseHealthStatus } from "@/components/custom/courseHealthStatus";
 import { AddCourseModal } from "@/components/custom/addCourseModal";
-
-
-
+import { useCourses } from "@/hooks/useCourses";
+import { useDeliverables } from "@/hooks/useDeliverables";
+import { useWeekStats } from "@/hooks/useWeekStats";
+import clsx from "clsx";
 
 export default function Dashboard() {
-  /* ───────── MOCK DATA ───────── */
+
+  const courses = useCourses();
+  const courseMap = Object.fromEntries(courses.map(c => [c.courseId, c.courseCode]));
+  const deliverables = useDeliverables();
+  const weekStats = useWeekStats(deliverables);
+
+  // Calculating upcoming assignmetns
+  const now = new Date();
+  const threeWeeksFromNow = new Date();
+  threeWeeksFromNow.setDate(now.getDate() + 21);
+  const deadlines = deliverables.filter((d) => {
+      const due = new Date(d.dueDate);
+      return due >= now && due <= threeWeeksFromNow;
+    })
+    .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
+    .slice(0, 3);
+
+  // Calculation END
+
+  // Assignment priority calcs
+
+  function getPriorityScore(weight: number, difficulty: number) {
+    return weight * 0.6 + difficulty * 8; // tweak the weights as needed
+  }
+  
+  const computePriority = (weight: number, difficulty: number) => {
+    const score = getPriorityScore(weight, difficulty);
+    if (score > 70) return "high";
+    if (score > 40) return "medium";
+    return "low";
+  };
+
+  const oneWeekFromNow = new Date();
+  oneWeekFromNow.setDate(now.getDate() + 21);
+
+  const deliberablesNextWeek = deliverables.filter(d => {
+    const due = new Date(d.dueDate);
+    return due >= now && due <= oneWeekFromNow;
+  });
+
+  const highestPriority = deliberablesNextWeek
+  .map(d => ({ ...d, score: getPriorityScore(d.weight, d.difficulty) }))
+  .sort((a, b) => b.score - a.score)[0];
+
+  
+
+  const courseHealth = courses.map((c) => {
+    
+    const upcoming = deliverables.filter(
+      (d) => d.courseId === c.courseId && new Date(d.dueDate) > new Date()
+    );
+
+    const pct = Math.max(0, 100 - upcoming.length * 10);
+    const status = pct >= 70 ? "Healthy" : pct < 40 ? "At Risk" : "Moderate";
+    const color  = status === "Healthy" ? "green" : status === "At Risk" ? "red" : "amber";
+    return {
+      name: c.courseName,
+      code: c.courseCode,
+      status,
+      color,
+      pct,
+      tasks: upcoming.length,
+    };
+  });
+
+
+
+  
+
+  /*
+  MOCK DATA ------------------
+
   const weekStats = {
     assignmentsDue: 7,
     examsThisWeek: 3,
@@ -51,6 +123,7 @@ export default function Dashboard() {
       type: "essay",
     },
   ];
+  
 
   const courseHealth = [
     {
@@ -78,12 +151,19 @@ export default function Dashboard() {
       tasks: 3,
     },
   ];
+  /*
 
   /* ───────── JSX ───────── */
   return (
     <div className="mx-auto max-w-7xl p-8 space-y-10">
-      {/* ───────── 1 • THIS WEEK AT A GLANCE ───────── */}
+      {/* ───────── THIS WEEK AT A GLANCE ───────── */}
       <Card className="bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg">
+      <CardHeader className="flex items-center gap-2 pb-2">
+        <CalendarDays className="h-5 w-5 text-white/90" />
+        <CardTitle className="text-white text-xl font-semibold">
+          This Week at a Glance
+        </CardTitle>
+      </CardHeader>
         <CardContent className="p-6 grid grid-cols-4 text-center">
           <StatBlock value={weekStats.assignmentsDue} label="Assignments Due" />
           <StatBlock value={weekStats.examsThisWeek} label="Exams This Week" />
@@ -91,16 +171,25 @@ export default function Dashboard() {
           <StatBlock value={`${weekStats.progress}%`} label="Weekly Progress" />
         </CardContent>
   
-        <Alert className="rounded-none bg-white/90 text-blue-700 text-sm">
-          <BadgeInfo className="h-4 w-4" />
-          <AlertTitle className="font-semibold">Priority Alert:</AlertTitle>
-          <AlertDescription>
-            Economics midterm in 2 days – Review chapters 4-6
-          </AlertDescription>
-        </Alert>
+        {highestPriority && (
+          <div className="rounded-md bg-white/20 text-white px-4 py-2 text-sm flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 shrink-0 text-white" />
+            <span className="font-semibold">Priority Alert:</span>
+            <span className="truncate">
+              {highestPriority.title} ({courseMap[highestPriority.courseId]}) due in{" "}
+              {Math.ceil(
+                (new Date(highestPriority.dueDate).getTime() - now.getTime()) /
+                  (1000 * 60 * 60 * 24)
+              )}{" "}
+              days!
+            </span>
+          </div>
+        )}
+
+
       </Card>
   
-      {/* ───────── 2 • GRID  (left = 2fr, right = 1fr) ───────── */}
+      {/* ───────── GRID  (left = 2fr, right = 1fr) ───────── */}
       <div className="grid lg:grid-cols-[2fr_1fr] gap-8">
         {/* LEFT COLUMN ────────────────────────────────── */}
         <div className="space-y-6">
@@ -111,28 +200,32 @@ export default function Dashboard() {
   
             <CardContent className="p-0">
               {deadlines.map((d, i) => (
-                <div
-                  key={d.title}
-                  className={`flex justify-between p-4 ${
-                    i !== deadlines.length - 1 && "border-b border-muted"
-                  }`}
-                >
+                <div className="px-4">
+                  <div
+                    key={d.title}
+                    className={clsx(
+                      "flex justify-between items-start p-4 rounded-md bg-muted/60 transition-colors duration-200",
+                      "hover:bg-muted/90",             
+                      "px-6",                          
+                      i !== deadlines.length - 1 && "mb-3"
+                    )}
+                  >
                   <div className="space-y-1">
                     <div className="font-medium flex items-center gap-2">
                       {d.title}
-                      <PriorityPill level={d.priority as any} />
-                      <CoursePill>{d.course}</CoursePill>
+                      <PriorityPill level={computePriority(d.weight, d.difficulty)} />
+                      <CoursePill>{courseMap[d.courseId] ?? "Unknown Course"}</CoursePill>
                     </div>
-                    <p className="text-muted-foreground text-sm">{d.desc}</p>
                     <p className="text-xs text-muted-foreground flex items-center gap-2">
                       <AlarmClock className="h-3 w-3" />
-                      {d.date} · {d.type}
+                      {new Date(d.dueDate).toLocaleDateString()} · {d.type}
+
                     </p>
                   </div>
-  
-                  <Button variant="link" size="sm">
-                    View Details
-                  </Button>
+                    <Button variant="link" size="sm">
+                      View Details
+                    </Button>
+                  </div>
                 </div>
               ))}
             </CardContent>
@@ -198,7 +291,7 @@ export default function Dashboard() {
   
 }
 
-/* ───────── small helper components ───────── */
+/* ───────── helper components ───────── */
 
 function StatBlock({ value, label }: { value: React.ReactNode; label: string }) {
   return (
@@ -215,7 +308,7 @@ function PriorityPill({ level }: { level: "high" | "medium" | "low" }) {
     level === "medium" ? "bg-amber-100 text-amber-700" :
     "bg-green-100 text-green-700";
   return (
-    <span className={`text-[10px] px-2 py-0.5 rounded-full capitalize ${color}`}>
+    <span className={`text-[13px] px-3 py-0.5 rounded-full capitalize ${color}`}>
       {level}
     </span>
   );
@@ -223,7 +316,7 @@ function PriorityPill({ level }: { level: "high" | "medium" | "low" }) {
 
 function CoursePill({ children }: { children: React.ReactNode }) {
   return (
-    <span className="text-[10px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
+    <span className="text-[13px] px-3 py-0.5 rounded-full bg-muted text-muted-foreground">
       {children}
     </span>
   );

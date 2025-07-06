@@ -8,6 +8,7 @@ import {
   import { Button } from "@/components/ui/button";
   import { useParams } from "react-router-dom";
   import { Upload, MessageCircle } from "lucide-react";
+  import { useCourses } from "@/hooks/useCourses";
   
   /* ─── temporary stub data ─── */
   const courseData = {
@@ -28,15 +29,16 @@ import {
   ];
   
   export default function CoursePage() {
-    const { courseId } = useParams();           
-    const course = courseData[courseId ?? ""] ?? { name: "" };
+    const { courseId } = useParams();
+    const courses = useCourses();
+    const course = courses.find((c) => c.courseCode === courseId);
   
     return (
       <div className="mx-auto max-w-7xl p-8 space-y-10">
         {/* Banner */}
         <div className="rounded-lg p-8 text-white bg-gradient-to-r from-blue-500 to-purple-500 shadow">
           <h1 className="text-3xl font-bold">{courseId}</h1>
-          <p className="opacity-90">{course.name}</p>
+          <p className="opacity-90">{course?.courseName}</p>
         </div>
   
         <div className="grid lg:grid-cols-[2fr_1fr] gap-8">
@@ -53,7 +55,7 @@ import {
               <CardContent className="space-y-4">
                 {/* Chat bubble */}
                 <div className="rounded-md bg-muted p-4 text-sm">
-                  Hi! I’m ready to help you with {course.name}. What would you like
+                  Hi! I’m ready to help you with {course?.courseName}. What would you like
                   to learn about today?
                 </div>
   

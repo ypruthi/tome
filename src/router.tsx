@@ -1,6 +1,6 @@
 import { createBrowserRouter } from "react-router-dom";
 import Layout from "./Layout";
-import Home from "./Home";
+import Dashboard from "./Dashboard";
 import AuthCallback from "./AuthCallback";
 import CoursePage from "@/components/custom/coursePage";
 
@@ -11,7 +11,7 @@ export const router = createBrowserRouter(
       children: [
         { 
           path: "/", 
-          element: <Home /> },
+          element: <Dashboard /> },
         {
           path: "/auth/callback",
           element: <AuthCallback />,
